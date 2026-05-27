@@ -11,13 +11,12 @@ export interface myQOptions {
   activeRefreshDuration: number,
   activeRefreshInterval: number,
   debug: boolean,
-  email: string,
   mqttTopic: string,
   mqttUrl: string,
   name: string,
   options: string[],
-  password: string,
-  refreshInterval: number
+  refreshInterval: number,
+  refreshToken: string
 }
 
 // Feature option categories.

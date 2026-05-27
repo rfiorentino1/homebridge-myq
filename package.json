@@ -2,19 +2,19 @@
   "name": "homebridge-myq",
   "version": "3.4.4",
   "displayName": "Homebridge myQ",
-  "description": "HomeKit integration for myQ enabled devices such as those from LiftMaster and Chamberlain.",
+  "description": "Refresh-token-only fork of homebridge-myq for the post-AppCheck era. Bootstrap via one-time refresh_token extraction; runs indefinitely thereafter.",
   "author": {
     "name": "HJD",
     "url": "https://github.com/hjdhjd"
   },
-  "homepage": "https://github.com/hjdhjd/homebridge-myq#readme",
+  "homepage": "https://github.com/rfiorentino1/homebridge-myq#readme",
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "git://github.com/hjdhjd/homebridge-myq.git"
+    "url": "git://github.com/rfiorentino1/homebridge-myq.git"
   },
   "bugs": {
-    "url": "https://github.com/hjdhjd/homebridge-myq/issues"
+    "url": "https://github.com/rfiorentino1/homebridge-myq/issues"
   },
   "keywords": [
     "chamberlain",
@@ -59,7 +59,7 @@
     "typescript": "5.4.5"
   },
   "dependencies": {
-    "@hjdhjd/myq": "7.6.0",
+    "@hjdhjd/myq": "github:rfiorentino1/myq",
     "@homebridge/plugin-ui-utils": "1.0.3",
     "mqtt": "5.5.4"
   }

@@ -78,19 +78,18 @@ export class myQPlatform implements DynamicPlatformPlugin {
       activeRefreshDuration: "activeRefreshDuration" in config ? parseInt(config.activeRefreshDuration as string) : MYQ_ACTIVE_DEVICE_REFRESH_DURATION,
       activeRefreshInterval: "activeRefreshInterval" in config ? parseInt(config.activeRefreshInterval as string) : MYQ_ACTIVE_DEVICE_REFRESH_INTERVAL,
       debug: config.debug === true,
-      email: config.email as string,
       mqttTopic: config.mqttTopic as string ?? MYQ_MQTT_TOPIC,
       mqttUrl: config.mqttUrl as string,
       name: config.name as string,
       options: config.options as string[],
-      password: config.password as string,
-      refreshInterval: "refreshInterval" in config ? parseInt(config.refreshInterval as string) : MYQ_DEVICE_REFRESH_INTERVAL
+      refreshInterval: "refreshInterval" in config ? parseInt(config.refreshInterval as string) : MYQ_DEVICE_REFRESH_INTERVAL,
+      refreshToken: config.refreshToken as string
     };
 
-    // We need login credentials or we're not starting.
-    if(!this.config.email || !this.config.password) {
+    // We need a refresh_token or we're not starting.
+    if(!this.config.refreshToken) {
 
-      this.log.error("No myQ login credentials configured.");
+      this.log.error("No myQ refresh token configured. Extract one from the official myQ app and paste into Homebridge config.");
       return;
     }
 
@@ -173,7 +172,7 @@ export class myQPlatform implements DynamicPlatformPlugin {
 
     // Whether we login successfully or not here, we're going to continue forward. The API isn't always reliable and simply stopping at this stage would leave users
     // who might have valid credentials unable to access the API.
-    await this.myQApi.login(this.config.email, this.config.password);
+    await this.myQApi.login(this.config.refreshToken);
 
     // Fire off our polling, with an immediate status refresh to begin with to provide us that responsive feeling.
     this.poll(this.config.refreshInterval * -1);

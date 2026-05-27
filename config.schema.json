@@ -2,73 +2,50 @@
   "pluginAlias": "myQ",
   "pluginType": "platform",
   "singular": true,
-  "customUi": true,
-  "headerDisplay": "[homebridge-myq](https://github.com/hjdhjd/homebridge-myq) provides HomeKit support to myQ-enabled smart garage door openers and other devices.",
-  "footerDisplay": "See the [homebridge-myq developer page](https://github.com/hjdhjd/homebridge-myq) for detailed documentation, including [feature options](https://github.com/hjdhjd/homebridge-myq#feature-options).",
+  "headerDisplay": "[homebridge-myq](https://github.com/rfiorentino1/homebridge-myq) provides HomeKit support to myQ-enabled smart garage door openers. This fork uses refresh-token-only authentication (the original email/password flow no longer works due to Chamberlain gating it behind Firebase App Check in late 2023).",
+  "footerDisplay": "**Bootstrap:** You must extract a refresh_token one-time from the official myQ iOS or Android app and paste it below. Once captured, it works indefinitely. See the README for extraction instructions.",
   "schema": {
     "type": "object",
     "properties": {
-
-      "email": {
-        "title": "myQ Email",
-        "type": "string",
-        "required": true,
-        "placeholder": "user@example.com",
-        "description": "Email address used for your myQ account.",
-        "x-schema-form": {
-           "type": "email"
-         }
-      },
-
-      "password": {
-        "title": "myQ Password",
-        "type": "string",
-        "required": true,
-        "placeholder": "mypassword",
-        "description": "Password used for your myQ account.",
-        "x-schema-form": {
-           "type": "password"
-         }
-      },
-
       "name": {
         "title": "Plugin Name",
         "type": "string",
         "required": true,
         "default": "myQ",
-        "description": "Name to use for Homebridge logging purposes. Default: myQ."
+        "description": "Name to use for Homebridge logging purposes."
       },
-
+      "refreshToken": {
+        "title": "myQ Refresh Token",
+        "type": "string",
+        "required": true,
+        "description": "Refresh token extracted from the official myQ app. The plugin uses this to authenticate against partner-identity.myq-cloud.com without needing App Check."
+      },
       "options": {
         "title": "Feature Options",
         "type": "array",
-
         "items": {
           "type": "string",
           "title": "Feature Option",
           "required": false,
-          "description": "Enter only one option per entry. See the plugin documentation for the complete list of available options or use the feature options webUI tab above.",
+          "description": "One option per entry. See plugin docs for valid options.",
           "placeholder": "e.g. Disable.Device.SerialNumber"
         }
       },
-
       "mqttTopic": {
         "type": "string",
         "title": "MQTT Base Topic",
         "required": false,
         "placeholder": "e.g. myq",
-        "description": "The base MQTT topic to publish to. Default: myq."
+        "description": "Base MQTT topic to publish to. Default: myq."
       },
-
       "mqttUrl": {
         "type": "string",
         "title": "MQTT Broker URL",
         "required": false,
         "format": "uri",
         "placeholder": "e.g. mqtt://1.2.3.4",
-        "description": "URL for the MQTT broker you'd like to publish event messages to. Default: None."
+        "description": "URL for MQTT broker. Default: none (MQTT disabled)."
       },
-
       "refreshInterval": {
         "title": "Refresh Interval",
         "type": "integer",
@@ -77,106 +54,28 @@
         "required": false,
         "description": "Normal myQ status refresh interval, in seconds. Default: 12."
       },
-
       "activeRefreshInterval": {
         "title": "Active Refresh Interval",
         "type": "integer",
         "minimum": 2,
         "maximum": 10,
         "required": false,
-        "description": "Refresh interval in seconds to use once device state changes are detected. Default: 3."
+        "description": "Faster refresh interval once a state change is detected. Default: 3."
       },
-
       "activeRefreshDuration": {
         "title": "Active Refresh Duration",
+        "type": "integer",
         "minimum": 5,
         "maximum": 900,
-        "type": "integer",
         "required": false,
-        "description": "Duration in seconds to use the Active Refresh Interval to query for additional device state changes. Default: 300."
+        "description": "Duration in seconds to use the Active Refresh Interval. Default: 300."
       },
-
       "debug": {
         "title": "Debug Logging",
         "type": "boolean",
         "required": false,
-        "description": "Logging verbosity for debugging. Default: false."
+        "description": "Verbose logging for debugging."
       }
-
     }
-  },
-
-  "layout": [
-    {
-      "type": "section",
-      "title": "myQ Login Credentials",
-      "expandable": true,
-      "expanded": false,
-      "items": [
-        {
-          "description": "Enter your myQ email and password below.",
-          "items": [
-            "email",
-            "password"
-          ]
-        }
-      ]
-    },
-
-    {
-      "type": "section",
-      "title": "Plugin Feature Options (Optional)",
-      "expandable": true,
-      "expanded": false,
-      "items": [
-        {
-          "key": "options",
-          "type": "array",
-          "orderable": true,
-          "title": " ",
-          "description": "Use the feature options webUI tab above instead of manually configuring feature options here.",
-          "buttonText": "Add Feature Option",
-          "items": [
-            "options[]"
-          ]
-        }
-      ]
-    },
-
-    {
-      "type": "section",
-      "title": "MQTT Settings (Optional)",
-      "expandable": true,
-      "expanded": false,
-      "items": [
-        {
-          "description": "MQTT support will only be enabled if an MQTT broker URL is specified below.",
-          "items": [
-            "mqttUrl",
-            "mqttTopic"
-          ]
-        }
-      ]
-    },
-
-    {
-      "type": "section",
-      "title": "Advanced Settings (Optional)",
-      "expandable": true,
-      "expanded": false,
-      "items": [
-        {
-          "description": "These settings should be rarely used or needed by most people. Use these with caution.",
-          "items": [
-            "name",
-            "refreshInterval",
-            "activeRefreshInterval",
-            "activeRefreshDuration",
-            "debug"
-          ]
-        }
-      ]
-    }
-
-  ]
+  }
 }
