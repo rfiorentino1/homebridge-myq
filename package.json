@@ -43,7 +43,8 @@
     "postpublish": "npm run clean",
     "prepublishOnly": "npm run lint && npm run build",
     "test": "eslint src/**.ts",
-    "watch": "npm run build && npm link && nodemon"
+    "watch": "npm run build && npm link && nodemon",
+    "prepare": "npm run build"
   },
   "main": "dist/index.js",
   "devDependencies": {
@@ -62,5 +63,12 @@
     "@hjdhjd/myq": "github:rfiorentino1/myq",
     "@homebridge/plugin-ui-utils": "1.0.3",
     "mqtt": "5.5.4"
-  }
+  },
+  "files": [
+    "src/",
+    "tsconfig.json",
+    "dist/",
+    "config.schema.json",
+    "homebridge-ui/"
+  ]
 }
