@@ -1,108 +1,60 @@
-<SPAN ALIGN="CENTER" STYLE="text-align:center">
-<DIV ALIGN="CENTER" STYLE="text-align:center">
+# homebridge-myq — refresh-token-only fork
 
-[![homebridge-myq: Native HomeKit support for myQ garage door openers and other devices](https://raw.githubusercontent.com/hjdhjd/homebridge-myq/main/homebridge-myq.svg)](https://github.com/hjdhjd/homebridge-myq)
+Fork of [hjdhjd/homebridge-myq](https://github.com/hjdhjd/homebridge-myq) adapted for the **post-AppCheck era** so myQ garage door openers (Liftmaster / Chamberlain) can be controlled from HomeKit again.
 
-# Homebridge myQ
+## Why this fork exists
 
-[![Downloads](https://img.shields.io/npm/dt/homebridge-myq?color=%235EB5E5&logo=icloud&logoColor=%23FFFFFF&style=for-the-badge)](https://www.npmjs.com/package/homebridge-myq)
-[![Version](https://img.shields.io/npm/v/homebridge-myq?color=%235EB5E5&label=Homebridge%20myQ&logoColor=%23FFFFFF&style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyByb2xlPSJpbWciIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBzdHlsZT0iZmlsbDojRkZGRkZGIiBkPSJNMjMuOTkzIDkuODE2TDEyIDIuNDczbC00LjEyIDIuNTI0VjIuNDczSDQuMTI0djQuODE5TC4wMDQgOS44MTZsMS45NjEgMy4yMDIgMi4xNi0xLjMxNXY5LjgyNmgxNS43NDl2LTkuODI2bDIuMTU5IDEuMzE1IDEuOTYtMy4yMDIiLz48L3N2Zz4K)](https://www.npmjs.com/package/homebridge-myq)
-[![myQ@Homebridge Discord](https://img.shields.io/discord/432663330281226270?color=%235EB5E5&label=Discord&logo=discord&logoColor=%23FFFFFF&style=for-the-badge)](https://discord.gg/QXqfHEW)
-[![verified-by-homebridge](https://img.shields.io/badge/homebridge-verified-blueviolet?color=%2357277C&style=for-the-badge&logoColor=%23FFFFFF&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5OTIuMDkiIGhlaWdodD0iMTAwMCIgdmlld0JveD0iMCAwIDk5Mi4wOSAxMDAwIj48ZGVmcz48c3R5bGU+LmF7ZmlsbDojZmZmO308L3N0eWxlPjwvZGVmcz48cGF0aCBjbGFzcz0iYSIgZD0iTTk1MC4xOSw1MDguMDZhNDEuOTEsNDEuOTEsMCwwLDEtNDItNDEuOWMwLS40OC4zLS45MS4zLTEuNDJMODI1Ljg2LDM4Mi4xYTc0LjI2LDc0LjI2LDAsMCwxLTIxLjUxLTUyVjEzOC4yMmExNi4xMywxNi4xMywwLDAsMC0xNi4wOS0xNkg3MzYuNGExNi4xLDE2LjEsMCwwLDAtMTYsMTZWMjc0Ljg4bC0yMjAuMDktMjEzYTE2LjA4LDE2LjA4LDAsMCwwLTIyLjY0LjE5TDYyLjM0LDQ3Ny4zNGExNiwxNiwwLDAsMCwwLDIyLjY1bDM5LjM5LDM5LjQ5YTE2LjE4LDE2LjE4LDAsMCwwLDIyLjY0LDBMNDQzLjUyLDIyNS4wOWE3My43Miw3My43MiwwLDAsMSwxMDMuNjIuNDVMODYwLDUzOC4zOGE3My42MSw3My42MSwwLDAsMSwwLDEwNGwtMzguNDYsMzguNDdhNzMuODcsNzMuODcsMCwwLDEtMTAzLjIyLjc1TDQ5OC43OSw0NjguMjhhMTYuMDUsMTYuMDUsMCwwLDAtMjIuNjUuMjJMMjY1LjMsNjgwLjI5YTE2LjEzLDE2LjEzLDAsMCwwLDAsMjIuNjZsMzguOTIsMzlhMTYuMDYsMTYuMDYsMCwwLDAsMjIuNjUsMGwxMTQtMTEyLjM5YTczLjc1LDczLjc1LDAsMCwxLDEwMy4yMiwwbDExMywxMTEsLjQyLjQyYTczLjU0LDczLjU0LDAsMCwxLDAsMTA0TDU0NS4wOCw5NTcuMzV2LjcxYTQxLjk1LDQxLjk1LDAsMSwxLTQyLTQxLjk0Yy41MywwLC45NS4zLDEuNDQuM0w2MTYuNDMsODA0LjIzYTE2LjA5LDE2LjA5LDAsMCwwLDQuNzEtMTEuMzMsMTUuODUsMTUuODUsMCwwLDAtNC43OS0xMS4zMmwtMTEzLTExMWExNi4xMywxNi4xMywwLDAsMC0yMi42NiwwTDM2Ny4xNiw3ODIuNzlhNzMuNjYsNzMuNjYsMCwwLDEtMTAzLjY3LS4yN2wtMzktMzlhNzMuNjYsNzMuNjYsMCwwLDEsMC0xMDMuODZMNDM1LjE3LDQyNy44OGE3My43OSw3My43OSwwLDAsMSwxMDMuMzctLjlMNzU4LjEsNjM5Ljc1YTE2LjEzLDE2LjEzLDAsMCwwLDIyLjY2LDBsMzguNDMtMzguNDNhMTYuMTMsMTYuMTMsMCwwLDAsMC0yMi42Nkw1MDYuNSwyNjUuOTNhMTYuMTEsMTYuMTEsMCwwLDAtMjIuNjYsMEwxNjQuNjksNTgwLjQ0QTczLjY5LDczLjY5LDAsMCwxLDYxLjEsNTgwTDIxLjU3LDU0MC42OWwtLjExLS4xMmE3My40Niw3My40NiwwLDAsMSwuMTEtMTAzLjg4TDQzNi44NSwyMS40MUE3My44OSw3My44OSwwLDAsMSw1NDAsMjAuNTZMNjYyLjYzLDEzOS4zMnYtMS4xYTczLjYxLDczLjYxLDAsMCwxLDczLjU0LTczLjVINzg4YTczLjYxLDczLjYxLDAsMCwxLDczLjUsNzMuNVYzMjkuODFhMTYsMTYsMCwwLDAsNC43MSwxMS4zMmw4My4wNyw4My4wNWguNzlhNDEuOTQsNDEuOTQsMCwwLDEsLjA4LDgzLjg4WiIvPjwvc3ZnPg==)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
+hjdhjd retired `homebridge-myq` in late 2023 / early 2024 after Chamberlain put **Firebase App Check** (Play Integrity / App Attest) in front of the `authorization_code` grant on their identity server. The email-and-password login flow that every community client used stopped working overnight, and there was no clean alternative UX to ship.
 
-## myQ garage door and other myQ-enabled device support for [Homebridge](https://homebridge.io).
-</DIV>
-</SPAN>
+The `refresh_token` grant on the same endpoint stayed open. This fork:
 
-### `homebridge-myq` is officially retired, for now. For those interested in an alternative solution, I would highly recommend looking into [Ratgdo](https://paulwieland.github.io/ratgdo/) and my [homebridge-ratgdo](https://github.com/hjdhjd/homebridge-ratgdo) plugin that provides all the capabilities of `homebridge-myq` and more capabilities that were never possible due to the myQ API constraints. Thank you for all the support and to the members of the community I've gotten to know over the years.
+- Depends on [`rfiorentino1/myq`](https://github.com/rfiorentino1/myq) (a corresponding fork of the library) which uses Chamberlain's iOS confidential client `IOS_CGI_MYQ` and skips the AppCheck-gated authorization_code path.
+- Replaces the `email` + `password` plugin config fields with a single `refreshToken` field.
+- Removes hjdhjd's retirement-message early-return so the plugin actually starts.
+- Otherwise leaves the plugin essentially unchanged — same MQTT support, same feature options, same polling, same garage-door + lamp accessory types.
 
-`homebridge-myq` ~~is~~was a [Homebridge](https://homebridge.io) plugin that makes myQ-enabled devices available to [Apple's](https://www.apple.com) [HomeKit](https://www.apple.com/ios/home) smart home platform. myQ-enabled devices include many smart garage door openers made primarily by Liftmaster, Chamberlain, and Craftsman, but includes other brands as well. You can determine if your garage door or other device is myQ-enabled by checking the [myQ compatibility check tool](https://www.myq.com/myq-compatibility) on the myQ website.
+## Install
 
-There ~~are~~were two ways to control a myQ-compatible garage door opener through [HomeKit](https://www.apple.com/ios/home):
-
-1. Liftmaster and Chamberlain make a hardware HomeKit bridge also called [Home Bridge](https://www.liftmaster.com/myq-home-bridge/p/G819LMB) (not to be confused with the open source [Homebridge project](https://homebridge.io)).
-Unfortunately, some of us have encountered significant issues with the hardware bridge in a real world setting, where it either stops working or hangs for extended periods of time. That said, other users have encountered no issues and this hardware solution works well.
-
-2. A plugin for [Homebridge](https://homebridge.io) like this one that emulates the capabilities of a myQ [HomeKit](https://www.apple.com/ios/home) bridge device.
-
-Either solution will provide you with robust HomeKit integration, and you'll soon be automating your myQ smart garage with the richness of Apple's HomeKit ecosystem!
-
-## Why use this plugin for myQ support in HomeKit?
-In a nutshell, the aim of this plugin for things to *just work* with minimal required configuration by users. The goal is to provide as close to a streamlined experience as you would expect from a first-party or native HomeKit solution. For the adventurous, those additional granular options are, of course, available to support more esoteric use cases or other unique needs.
-
-What does *just work* mean in practice? It means that this plugin will discover all your myQ devices and poll at regular, reasonable intervals for changes in state of a garage door opener, lamp, or other myQ devices and inform HomeKit of those changes. By default. Without additional configuration beyond the login information required for myQ services.
-
-`homebridge-myq` has been around a long time and is trusted by thousands of users. It's the first myQ [Homebridge](https://homebridge.io) plugin to provide comprehensive support for various myQ features such as obstruction detection, and the first to provide support for multiple myQ device types. As more of the API can be decoded, my aim is to support as many device types as possible. I rely on this plugin every day and actively maintain and support it.
-
-### Features
-- ***Easy* configuration - all you need is your myQ username and password to get started.** The defaults work for the vast majority of users. When you want more, there are [advanced options](#advanced-config) you can play with, if you choose.
-
-- **Automatic detection and configuration of all lamps, garage door and gate openers.** By default - all of your supported myQ devices are made available in HomeKit.
-
-- **[Obstruction detection](#obstruction-status) on supported myQ garage door and gate openers.** When a garage door or gate is obstructed, and the myQ API provides that information, you'll see an alert raised in the Home app.
-
-- **[Battery status detection](#battery-status) on supported myQ door position sensor devices.** If you have a myQ supported door position sensor, you'll see an alert raised in the Home app to inform you when the battery is running low.
-
-- **The ability to [selectively hide and show](#feature-options) specific myQ devices.** For those who only want to show particular devices in HomeKit, or particular homes, a flexible and intuitive way to configure device availability at a granular level is available.
-
-- **Full MQTT support.** For those who use MQTT, this plugin provides full MQTT support with a rich set of options. [Read the MQTT documentation](https://github.com/hjdhjd/homebridge-myq/blob/main/docs/MQTT.md) for more details.
-
-### <A NAME="myq-contribute"></A>How you can contribute and make this plugin even better
-The myQ API is undocumented and implementing a plugin like this one is the result of many hours of reverse engineering, trial and error, and community support. This work stands on the shoulders of other myQ API projects out there and this project attempts to contribute back to that community base of knowledge to further improve myQ support for everyone.
-
-I would love to support more types of myQ devices. Currently `homebridge-myq` supports the following device types:
-
-- Garage door and gate openers
-- Lamps and myQ switches
-
-Additional device types will be added as time allows. It's unlikely I will add support for myQ locks due to their deprecated protocol support. myQ cameras may be added at some point, but there are additional non-technical considerations related to the paid myQ product that I want to be mindful of.
-
-## Documentation
-* Getting Started
-  * [Installation](#installation): installing this plugin, including system requirements.
-  * [Plugin Configuration](#plugin-configuration): how to quickly get up and running.
-  * [Additional Notes](#notes): some things you should be aware of, including myQ-specific quirks.
-
-* Advanced Topics
-  * [Feature Options](https://github.com/hjdhjd/homebridge-myq/blob/main/docs/FeatureOptions.md): granular options to allow you to show or hide specific garage door openers and more.
-  * [MQTT](https://github.com/hjdhjd/homebridge-myq/blob/main/docs/MQTT.md): how to configure MQTT support.
-  * [Advanced Configuration](https://github.com/hjdhjd/homebridge-myq/blob/main/docs/AdvancedOptions.md): complete list of configuration options available in this plugin.
-  * [Changelog](https://github.com/hjdhjd/homebridge-myq/blob/main/docs/Changelog.md): changes and release history of this plugin, starting with v2.0.
-
-## Installation
-If you are new to Homebridge, please first read the [Homebridge](https://homebridge.io) [documentation](https://github.com/homebridge/homebridge/wiki) and installation instructions before proceeding.
-
-If you have installed the [Homebridge Config UI](https://github.com/homebridge/homebridge-config-ui-x), you can intall this plugin by going to the `Plugins` tab and searching for `homebridge-myq` and installing it.
-
-### <A NAME="notes"></A>Things To Be Aware Of
-- <A NAME="myq-errors"></A>The myQ API has largely stabilized in recent years, particularly with the advent of the v6 version of the API. However, the myQ cloud can (and does) have occasional reliability challenges that can manifest through connectivity issues that you will see in the Homebridge logs related to this plugin. These are not bugs in `homebridge-myq` and there's not much we can do it aside from attempt to gracefully handle the errors when they occur. The myQ cloud is quite reliable the large majority (~93-95% by my estimate) of the time. Please do not open bug reports related to API issues - they'll be closed summarily unless it's a new API-specific issue that's emerged as a result of changes to the undocumented myQ API. These issues are largely harmless and resolve themselves on their own, usually in minutes, and occasionally in hours or days.
-
-- **As a result of the above you *will* see errors similar to this on an occasional basis in the Homebridge logs:**
-
-    ```
-    myQ API: Unable to update device status from the myQ API. Acquiring a new access token.
-    ```
-  These messages can be safely ignored. myQ API errors *will* inevtiably happen. The myQ cloud infrastructure from Liftmaster / Chamberlain is not completely reliable and occasionally errors out due to infrastructure maintenance, network issues, or other infrastructure hiccups that occur on the myQ end of things. This plugin has no control over this. The logging is informative and **not a cause for significant concern unless it is constant and ongoing for multiple days**, which would be indicative of the larger API issues referenced above. When one of these errors is detected, we log back into the myQ infrastructure, obtain new API security credentials, and attempt refresh our status in the next scheduled update, which by is roughly [every 12 seconds by default](#advanced-config).
-
-- <A NAME="obstruction-status"></A>Obstruction detection in myQ is more nuanced than one might think at first glance. When myQ detects an obstruction, that obstruction is only visible in the API for a *very* small amount of time, typically no more than a few seconds. This presents a user experience problem - if you remain completely faithful to the myQ API and only show the user the obstruction for the very short amount of time that it actually occurs, the user might never notice it because the alert is not visible for more than a few seconds. Instead, the design decision I've chosen to make is to ensure that any detected obstruction is alerted in HomeKit for 30 seconds from the last time myQ detected that obstruction. This ensures that the user has a reasonable chance of noticing there was an obstruction at some point in the very recent past, without having to have the user stare at the Home app constantly to happen to catch an ephemeral state.
-
-## Plugin Configuration
-If you choose to configure this plugin directly instead of using the [Homebridge Configuration web UI](https://github.com/oznu/homebridge-config-ui-x), you'll need to add the platform to your `config.json` in your home directory inside `.homebridge`.
-
-```js
-"platforms": [{
-    "platform": "myQ",
-    "email": "email@email.com",
-    "password": "password"
-}]
+```bash
+sudo hb-service add github:rfiorentino1/homebridge-myq
 ```
 
-For most people, I recommend using [Homebridge Configuration web UI](https://github.com/oznu/homebridge-config-ui-x) to configure this plugin rather than doing so directly. It's easier to use for most users, especially newer users, and less prone to typos, leading to other problems.
+Pre-built `dist/` is committed so installs don't require TypeScript compilation on the Pi. ~1 minute on a Raspberry Pi 4.
 
-## Plugin Development Dashboard
-This is mostly of interest to the true developer nerds amongst us.
+## Config
 
-[![License](https://img.shields.io/npm/l/homebridge-myq?color=%230559C9&logo=open%20source%20initiative&logoColor=%23FFFFFF&style=for-the-badge)](https://github.com/hjdhjd/homebridge-myq/blob/main/LICENSE.md)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/hjdhjd/homebridge-myq/ci.yml?branch=main&color=%230559C9&logo=github-actions&logoColor=%23FFFFFF&style=for-the-badge)](https://github.com/hjdhjd/homebridge-myq/actions?query=workflow%3A%22Continuous+Integration%22)
-[![Dependencies](https://img.shields.io/librariesio/release/npm/homebridge-myq?color=%230559C9&logo=dependabot&style=for-the-badge)](https://libraries.io/npm/homebridge-myq)
-[![GitHub commits since latest release (by SemVer)](https://img.shields.io/github/commits-since/hjdhjd/homebridge-myq/latest?color=%230559C9&logo=github&sort=semver&style=for-the-badge)](https://github.com/hjdhjd/homebridge-myq/commits/main)
+In Homebridge's `config.json`:
+
+```json
+{
+  "platform": "myQ",
+  "name": "myQ",
+  "refreshToken": "PASTE_YOUR_REFRESH_TOKEN_HERE"
+}
+```
+
+All of the original feature options (MQTT broker URL, refresh intervals, per-device hide rules, debug logging, etc.) still work — see [hjdhjd's documentation](https://github.com/hjdhjd/homebridge-myq) for the full list.
+
+## How do I get a refresh_token? ← the hard part
+
+You need to do this **once**, on a real iOS or Android device with the official myQ app installed and logged into your account. After that, the plugin runs indefinitely against your account without that device.
+
+Today the extraction is manual — you mitm your phone's myQ traffic and grab the `refresh_token` value from a `/connect/token` response body. mitmproxy in WireGuard mode + iOS WireGuard app is the cleanest path; the entire flow takes about 20 minutes.
+
+A future version of this plugin will embed the bootstrap UX so a user can click a button in the Homebridge UI, scan a QR with their phone's WireGuard app, install a CA, open the myQ app, and have the plugin auto-fill the `refreshToken` field. That's the right shape but not built yet.
+
+Until then, this fork is genuinely for technical users.
+
+## Limitations / known issues
+
+- **Cameras are discovered but not yet integrated.** The plugin logs `myQ device family 'camera' is not currently supported, ignoring` for myQ cameras (`TC-0005-*`). Camera streams use Tend's WebRTC + Seedonk P2P, which is its own RE project. Tracked separately.
+- **Capturing your refresh_token will likely cause your myQ phone app to display "offline" briefly.** Chamberlain's IDS rotates refresh tokens; when you redeem one, it invalidates the previous holder's session. Force-quit + reopen the myQ app and it'll re-authenticate. After that initial conflict, your phone and the plugin coexist fine — each has its own refresh_token.
+- **Chamberlain could close the refresh-grant path at any time** by adding AppCheck enforcement to refresh requests too. As of mid-2026 they have not, and the third-party [`@amritbrar/homebridge-myq`](https://www.npmjs.com/package/@amritbrar/homebridge-myq) npm package using the same approach has been live for 9+ months without breakage. Long-term durability is not guaranteed.
+
+## Credit
+
+The entire plugin architecture, HomeKit accessory layer, MQTT support, feature-options system, and v6 API decoding is **hjdhjd's work** ([hjdhjd/homebridge-myq](https://github.com/hjdhjd/homebridge-myq) and [hjdhjd/myq](https://github.com/hjdhjd/myq)). This fork is a minimal patch on top, made necessary by Chamberlain's post-2023 hostility to third-party clients. If hjdhjd ever revives the upstream project, this fork should be retired.
+
+## License
+
+ISC, per upstream.
