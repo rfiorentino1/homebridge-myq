@@ -1,0 +1,10 @@
+export declare const MYQ_DEVICE_REFRESH_INTERVAL = 12;
+export declare const MYQ_ACTIVE_DEVICE_REFRESH_INTERVAL = 3;
+export declare const MYQ_ACTIVE_DEVICE_REFRESH_DURATION: number;
+export declare const MYQ_OBSTRUCTION_ALERT_DURATION = 30;
+export declare const MYQ_OCCUPANCY_DURATION = 300;
+export declare const MYQ_MQTT_RECONNECT_INTERVAL = 60;
+export declare const MYQ_MQTT_TOPIC = "myq";
+export declare const MYQ_OBSTRUCTED = 8675309;
+export declare const PLATFORM_NAME = "myQ";
+export declare const PLUGIN_NAME = "homebridge-myq";
