@@ -387,17 +387,32 @@ export class myQPlatform implements DynamicPlatformPlugin {
 
       if(!accessory) {
 
-        accessory = new this.api.platformAccessory(device.name, uuid);
+        // Explicit Categories.GARAGE_DOOR_OPENER so HomeKit renders this as a garage-door
+        // tile (with open/close affordance) instead of falling back to a switch tile. The
+        // hjdhjd upstream code omits this, which lets the default OTHER category through —
+        // most HomeKit clients infer the right tile from the GarageDoorOpener service, but
+        // some Home app versions show it as a generic switch without the explicit category.
+        const accessoryCategory = device.device_family === "lamp"
+
+          ? this.hap.Categories.LIGHTBULB
+          : this.hap.Categories.GARAGE_DOOR_OPENER;
+
+        accessory = new this.api.platformAccessory(device.name, uuid, accessoryCategory);
 
         this.log.info("%s: Adding %s device to HomeKit: %s.", device.name, device.device_family, this.myQApi.getDeviceName(device));
 
-        // Register this accessory with homebridge and add it to the accessory array so we can track it.
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
         this.accessories.push(accessory);
+      } else if(device.device_family.indexOf("garagedoor") !== -1 && accessory.category !== this.hap.Categories.GARAGE_DOOR_OPENER) {
+
+        // Fix up category on accessories that were originally registered without one
+        // (the cause of "garage doors show as switches" in HomeKit). Apply on every
+        // startup so existing cached accessories migrate the next time the plugin loads.
+        accessory.category = this.hap.Categories.GARAGE_DOOR_OPENER;
+        this.api.updatePlatformAccessories([accessory]);
       }
 
-      // Stamp the serial in context so the cleanup loop recognizes this accessory by serial
-      // (more robust than relying on configuredDevices, which can be transiently empty).
+      // Stamp the serial in context so future cleanup logic can recognize this accessory.
       accessory.context.serial = device.serial_number;
 
       // If we've already configured this accessory, update it's state and we're done here.
