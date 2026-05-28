@@ -6,6 +6,8 @@ import { myQGarageDoor } from "./myq-garagedoor.js";
 import { myQLamp } from "./myq-lamp.js";
 import { myQMqtt } from "./myq-mqtt.js";
 import { TendApi } from "./tend-api.js";
+import fs from "node:fs";
+import path from "node:path";
 import util from "node:util";
 export class myQPlatform {
     accessories;
@@ -109,10 +111,49 @@ export class myQPlatform {
         // Add this to the accessory array so we can track it.
         this.accessories.push(accessory);
     }
+    get tokenStatePath() {
+        return path.join(this.api.user.storagePath(), "myq-refresh-token.json");
+    }
+    loadPersistedRefreshToken() {
+        try {
+            if (!fs.existsSync(this.tokenStatePath)) {
+                return null;
+            }
+            const data = JSON.parse(fs.readFileSync(this.tokenStatePath, "utf8"));
+            return data?.refreshToken ?? null;
+        }
+        catch (e) {
+            this.log.debug("Couldn't read persisted refresh_token: %s", String(e));
+            return null;
+        }
+    }
+    persistRefreshToken(token) {
+        try {
+            fs.writeFileSync(this.tokenStatePath, JSON.stringify({
+                refreshToken: token,
+                updated: new Date().toISOString()
+            }, null, 2));
+        }
+        catch (e) {
+            this.log.warn("Couldn't persist refresh_token to %s: %s", this.tokenStatePath, String(e));
+        }
+    }
     async login() {
+        // Persistence: the lib rotates refresh_token on every auth refresh, but only in memory.
+        // After a homebridge restart, the config.json token is usually stale. Prefer a sidecar
+        // we wrote on the last successful rotation.
+        const persisted = this.loadPersistedRefreshToken();
+        const initialToken = persisted ?? this.config.refreshToken;
+        if (persisted) {
+            this.log.debug("Using persisted refresh_token from %s (config token may be stale).", this.tokenStatePath);
+        }
+        // Register the rotation callback BEFORE login so the first refresh's token gets written.
+        this.myQApi.setTokenPersistCallback((newToken) => {
+            this.persistRefreshToken(newToken);
+        });
         // Whether we login successfully or not here, we're going to continue forward. The API isn't always reliable and simply stopping at this stage would leave users
         // who might have valid credentials unable to access the API.
-        await this.myQApi.login(this.config.refreshToken);
+        await this.myQApi.login(initialToken);
         // Discover Tend cameras (separate platform than the legacy myQ REST). Don't let a Tend
         // failure stop the rest of the plugin from working — garage doors keep going either way.
         await this.discoverCameras().catch(err => {
@@ -169,11 +210,13 @@ export class myQPlatform {
             if (!accessory) {
                 accessory = new this.api.platformAccessory(cam.name, uuid, 17 /* this.hap.Categories.IP_CAMERA */);
                 this.log.info("%s: Adding Tend camera to HomeKit (serial=%s).", cam.name, cam.serial_number);
-                this.api.publishExternalAccessories(PLUGIN_NAME, [accessory]);
-                // NOTE: external camera accessories are NOT tracked in this.accessories — that array
-                // is for the bridged garage doors. Pushing externals here causes the legacy
-                // device-list sync to "unregister" them as unknown devices on the next poll.
+                this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+                this.accessories.push(accessory);
             }
+            // Stamp the serial in context so the cleanup loop can recognize this accessory and
+            // avoid unregistering it when the lib's device list lacks it (Tend platform uses a
+            // separate enumeration path).
+            accessory.context.serial = cam.serial_number;
             if (!this.configuredCameras[accessory.UUID]) {
                 this.configuredCameras[accessory.UUID] = new myQCamera(accessory, this.api, this.log, cam, jwtProvider);
             }
@@ -231,6 +274,9 @@ export class myQPlatform {
                 this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
                 this.accessories.push(accessory);
             }
+            // Stamp the serial in context so the cleanup loop recognizes this accessory by serial
+            // (more robust than relying on configuredDevices, which can be transiently empty).
+            accessory.context.serial = device.serial_number;
             // If we've already configured this accessory, update it's state and we're done here.
             if (this.configuredDevices[accessory.UUID]) {
                 this.configuredDevices[accessory.UUID].myQ = device;
@@ -254,18 +300,11 @@ export class myQPlatform {
             // Refresh the accessory cache with these values.
             this.api.updatePlatformAccessories([accessory]);
         }
-        // Remove myQ devices that are no longer found in the myQ API, but we still have in HomeKit.
-        for (const oldAccessory of this.accessories) {
-            const device = this.configuredDevices[oldAccessory.UUID];
-            // We found this accessory in myQ. Figure out if we really want to see it in HomeKit.
-            if (device?.hasFeature("Device")) {
-                continue;
-            }
-            this.log.info("%s: Removing myQ device from HomeKit.", device?.name ?? oldAccessory.displayName);
-            delete this.configuredDevices[oldAccessory.UUID];
-            this.accessories.splice(this.accessories.indexOf(oldAccessory), 1);
-            this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [oldAccessory]);
-        }
+        // Intentionally do NOT unregister accessories the lib can't see. Once HomeKit has paired
+        // an accessory (rooms, scenes, automations), unregistering tears all that down — even if
+        // the same UUID is republished moments later. Transient API failures (5xx storms, expired
+        // tokens, brief device offline blips) would silently destroy the user's HomeKit setup.
+        // If a device is genuinely permanently gone, the user can clear it via the Homebridge UI.
         return true;
     }
     // Update HomeKit with the latest status from myQ.

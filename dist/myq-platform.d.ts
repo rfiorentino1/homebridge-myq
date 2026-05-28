@@ -30,6 +30,9 @@ export declare class myQPlatform implements DynamicPlatformPlugin {
     private tendApi;
     constructor(log: Logging, config: PlatformConfig, api: API);
     configureAccessory(accessory: PlatformAccessory): void;
+    private get tokenStatePath();
+    private loadPersistedRefreshToken;
+    private persistRefreshToken;
     private login;
     /**
      * Find Tend cameras (TC-0005-* serials) for this account and register a CameraController
