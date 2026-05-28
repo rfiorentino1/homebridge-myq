@@ -2,7 +2,17 @@
 import { TendCameraInfo } from "./tend-types.js";
 export declare class TendApi {
     private jwt;
-    constructor(jwt: string);
+    private refreshToken;
+    private expiresAt;
+    constructor(jwt: string, refreshToken?: string);
+    /**
+     * Refresh the access token using the IDS refresh-token grant. The plugin's myQ lib
+     * occasionally null's its own access token when the legacy /v5.2/Accounts/{id}/Devices
+     * endpoint returns 530; this path keeps Tend access working independently.
+     */
+    refresh(): Promise<boolean>;
+    getRefreshToken(): string | null;
+    getJwt(): string;
     /** Update the bearer token (after refresh). */
     setJwt(jwt: string): void;
     private headers;

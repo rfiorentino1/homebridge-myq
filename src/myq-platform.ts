@@ -191,16 +191,20 @@ export class myQPlatform implements DynamicPlatformPlugin {
    */
   private async discoverCameras(): Promise<void> {
 
-    const jwt = this.myQApi.getRawAccessToken();
+    // Build a TendApi seeded with the refresh_token so it can re-acquire access tokens
+    // independently when the lib's own token gets reset by 530s on the garage-door endpoint.
+    if(!this.tendApi) {
 
-    if(!jwt) {
+      this.tendApi = new TendApi(this.myQApi.getRawAccessToken() ?? "", this.config.refreshToken);
+    }
 
-      this.log.debug("Skipping camera discovery: no access token yet.");
+    // Refresh once at startup so we have a fresh, Tend-scoped JWT.
+    if(!(await this.tendApi.refresh())) {
+
+      this.log.warn("Tend access token refresh failed; cannot enumerate cameras.");
 
       return;
     }
-
-    this.tendApi = new TendApi(jwt);
 
     let cameras: TendCameraInfo[];
 
@@ -223,7 +227,15 @@ export class myQPlatform implements DynamicPlatformPlugin {
 
     this.log.info("Discovered %d Tend %s.", cameras.length, cameras.length === 1 ? "camera" : "cameras");
 
-    const jwtProvider: TendJwtProvider = { jwt: () => this.myQApi.getRawAccessToken() ?? "" };
+    // JWT comes from the TendApi which auto-refreshes against the IDS refresh-token grant.
+    // We schedule a periodic re-refresh so long-lived sessions keep working.
+    const tendApi = this.tendApi;
+    const jwtProvider: TendJwtProvider = { jwt: () => tendApi.getJwt() };
+
+    setInterval(() => {
+
+      tendApi.refresh().catch(err => this.log.debug("Tend refresh failed: %s", String(err)));
+    }, 25 * 60 * 1000); // every 25 minutes (tokens live 30m)
 
     for(const cam of cameras) {
 

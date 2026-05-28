@@ -128,12 +128,16 @@ export class myQPlatform {
      * SDNK NAT punching + AES-CBC decrypt (see tend-stream.ts / tend-cxnet.ts).
      */
     async discoverCameras() {
-        const jwt = this.myQApi.getRawAccessToken();
-        if (!jwt) {
-            this.log.debug("Skipping camera discovery: no access token yet.");
+        // Build a TendApi seeded with the refresh_token so it can re-acquire access tokens
+        // independently when the lib's own token gets reset by 530s on the garage-door endpoint.
+        if (!this.tendApi) {
+            this.tendApi = new TendApi(this.myQApi.getRawAccessToken() ?? "", this.config.refreshToken);
+        }
+        // Refresh once at startup so we have a fresh, Tend-scoped JWT.
+        if (!(await this.tendApi.refresh())) {
+            this.log.warn("Tend access token refresh failed; cannot enumerate cameras.");
             return;
         }
-        this.tendApi = new TendApi(jwt);
         let cameras;
         try {
             cameras = await this.tendApi.listCameras();
@@ -147,7 +151,13 @@ export class myQPlatform {
             return;
         }
         this.log.info("Discovered %d Tend %s.", cameras.length, cameras.length === 1 ? "camera" : "cameras");
-        const jwtProvider = { jwt: () => this.myQApi.getRawAccessToken() ?? "" };
+        // JWT comes from the TendApi which auto-refreshes against the IDS refresh-token grant.
+        // We schedule a periodic re-refresh so long-lived sessions keep working.
+        const tendApi = this.tendApi;
+        const jwtProvider = { jwt: () => tendApi.getJwt() };
+        setInterval(() => {
+            tendApi.refresh().catch(err => this.log.debug("Tend refresh failed: %s", String(err)));
+        }, 25 * 60 * 1000); // every 25 minutes (tokens live 30m)
         for (const cam of cameras) {
             if (!cam.aes_key) {
                 this.log.warn("Camera %s has no AES key, skipping.", cam.name);
