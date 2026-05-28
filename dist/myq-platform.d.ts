@@ -2,6 +2,7 @@ import { API, DynamicPlatformPlugin, HAP, Logging, PlatformAccessory, PlatformCo
 import { myQOptions } from "./myq-options.js";
 import { myQAccessory } from "./myq-device.js";
 import { myQApi } from "@hjdhjd/myq";
+import { myQCamera } from "./myq-camera.js";
 import { myQMqtt } from "./myq-mqtt.js";
 interface myQPollInterface {
     count: number;
@@ -16,6 +17,9 @@ export declare class myQPlatform implements DynamicPlatformPlugin {
     readonly configuredDevices: {
         [index: string]: myQAccessory;
     };
+    readonly configuredCameras: {
+        [index: string]: myQCamera;
+    };
     readonly hap: HAP;
     readonly log: Logging;
     readonly mqtt: myQMqtt;
@@ -23,9 +27,16 @@ export declare class myQPlatform implements DynamicPlatformPlugin {
     private pollingTimer;
     readonly pollOptions: myQPollInterface;
     private unsupportedDevices;
+    private tendApi;
     constructor(log: Logging, config: PlatformConfig, api: API);
     configureAccessory(accessory: PlatformAccessory): void;
     private login;
+    /**
+     * Find Tend cameras (TC-0005-* serials) for this account and register a CameraController
+     * accessory for each. Snapshots use the Tend REST endpoint; live streaming uses CXNet +
+     * SDNK NAT punching + AES-CBC decrypt (see tend-stream.ts / tend-cxnet.ts).
+     */
+    private discoverCameras;
     private discoverAndSyncAccessories;
     private updateAccessories;
     poll(delay?: number): void;

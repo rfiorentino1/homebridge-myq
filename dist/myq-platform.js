@@ -1,9 +1,11 @@
 import { MYQ_ACTIVE_DEVICE_REFRESH_DURATION, MYQ_ACTIVE_DEVICE_REFRESH_INTERVAL, MYQ_DEVICE_REFRESH_INTERVAL, MYQ_MQTT_TOPIC, PLATFORM_NAME, PLUGIN_NAME } from "./settings.js";
 import { featureOptionCategories, featureOptions, isOptionEnabled } from "./myq-options.js";
 import { myQApi } from "@hjdhjd/myq";
+import { myQCamera } from "./myq-camera.js";
 import { myQGarageDoor } from "./myq-garagedoor.js";
 import { myQLamp } from "./myq-lamp.js";
 import { myQMqtt } from "./myq-mqtt.js";
+import { TendApi } from "./tend-api.js";
 import util from "node:util";
 export class myQPlatform {
     accessories;
@@ -12,6 +14,7 @@ export class myQPlatform {
     config;
     configOptions;
     configuredDevices;
+    configuredCameras;
     hap;
     log;
     mqtt;
@@ -19,11 +22,13 @@ export class myQPlatform {
     pollingTimer;
     pollOptions;
     unsupportedDevices;
+    tendApi = null;
     constructor(log, config, api) {
         this.accessories = [];
         this.api = api;
         this.configOptions = [];
         this.configuredDevices = {};
+        this.configuredCameras = {};
         this.featureOptionDefaults = {};
         this.hap = api.hap;
         this.log = log;
@@ -108,9 +113,58 @@ export class myQPlatform {
         // Whether we login successfully or not here, we're going to continue forward. The API isn't always reliable and simply stopping at this stage would leave users
         // who might have valid credentials unable to access the API.
         await this.myQApi.login(this.config.refreshToken);
+        // Discover Tend cameras (separate platform than the legacy myQ REST). Don't let a Tend
+        // failure stop the rest of the plugin from working — garage doors keep going either way.
+        await this.discoverCameras().catch(err => {
+            this.log.warn("Camera discovery failed (garage doors still working): %s", String(err));
+        });
         // Fire off our polling, with an immediate status refresh to begin with to provide us that responsive feeling.
         this.poll(this.config.refreshInterval * -1);
         return true;
+    }
+    /**
+     * Find Tend cameras (TC-0005-* serials) for this account and register a CameraController
+     * accessory for each. Snapshots use the Tend REST endpoint; live streaming uses CXNet +
+     * SDNK NAT punching + AES-CBC decrypt (see tend-stream.ts / tend-cxnet.ts).
+     */
+    async discoverCameras() {
+        const jwt = this.myQApi.getRawAccessToken();
+        if (!jwt) {
+            this.log.debug("Skipping camera discovery: no access token yet.");
+            return;
+        }
+        this.tendApi = new TendApi(jwt);
+        let cameras;
+        try {
+            cameras = await this.tendApi.listCameras();
+        }
+        catch (err) {
+            this.log.warn("Tend camera discovery failed: %s", String(err));
+            return;
+        }
+        if (!cameras.length) {
+            this.log.debug("No Tend cameras found on this account.");
+            return;
+        }
+        this.log.info("Discovered %d Tend %s.", cameras.length, cameras.length === 1 ? "camera" : "cameras");
+        const jwtProvider = { jwt: () => this.myQApi.getRawAccessToken() ?? "" };
+        for (const cam of cameras) {
+            if (!cam.aes_key) {
+                this.log.warn("Camera %s has no AES key, skipping.", cam.name);
+                continue;
+            }
+            const uuid = this.hap.uuid.generate(cam.serial_number);
+            let accessory = this.accessories.find(x => x.UUID === uuid);
+            if (!accessory) {
+                accessory = new this.api.platformAccessory(cam.name, uuid, 17 /* this.hap.Categories.IP_CAMERA */);
+                this.log.info("%s: Adding Tend camera to HomeKit (serial=%s).", cam.name, cam.serial_number);
+                this.api.publishExternalAccessories(PLUGIN_NAME, [accessory]);
+                this.accessories.push(accessory);
+            }
+            if (!this.configuredCameras[accessory.UUID]) {
+                this.configuredCameras[accessory.UUID] = new myQCamera(accessory, this.api, this.log, cam, jwtProvider);
+            }
+        }
     }
     // Discover new myQ devices and sync existing ones with the myQ API.
     discoverAndSyncAccessories() {
