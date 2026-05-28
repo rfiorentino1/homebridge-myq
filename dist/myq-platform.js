@@ -128,12 +128,13 @@ export class myQPlatform {
      * SDNK NAT punching + AES-CBC decrypt (see tend-stream.ts / tend-cxnet.ts).
      */
     async discoverCameras() {
-        // Build a TendApi seeded with the refresh_token so it can re-acquire access tokens
-        // independently when the lib's own token gets reset by 530s on the garage-door endpoint.
+        // Use the lib's CURRENT refresh_token (rotated since first login), not the stale one in
+        // config.json. The lib's own access token gets cleared on 530s but the refresh_token
+        // stays valid, so we run our own refresh grant against IDS to keep Tend access alive.
+        const currentRefresh = this.myQApi.getCurrentRefreshToken() ?? this.config.refreshToken;
         if (!this.tendApi) {
-            this.tendApi = new TendApi(this.myQApi.getRawAccessToken() ?? "", this.config.refreshToken);
+            this.tendApi = new TendApi(this.myQApi.getRawAccessToken() ?? "", currentRefresh);
         }
-        // Refresh once at startup so we have a fresh, Tend-scoped JWT.
         if (!(await this.tendApi.refresh())) {
             this.log.warn("Tend access token refresh failed; cannot enumerate cameras.");
             return;
