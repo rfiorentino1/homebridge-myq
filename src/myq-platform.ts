@@ -256,7 +256,9 @@ export class myQPlatform implements DynamicPlatformPlugin {
         accessory = new this.api.platformAccessory(cam.name, uuid, this.hap.Categories.IP_CAMERA);
         this.log.info("%s: Adding Tend camera to HomeKit (serial=%s).", cam.name, cam.serial_number);
         this.api.publishExternalAccessories(PLUGIN_NAME, [accessory]);
-        this.accessories.push(accessory);
+        // NOTE: external camera accessories are NOT tracked in this.accessories — that array
+        // is for the bridged garage doors. Pushing externals here causes the legacy
+        // device-list sync to "unregister" them as unknown devices on the next poll.
       }
 
       if(!this.configuredCameras[accessory.UUID]) {
@@ -288,6 +290,13 @@ export class myQPlatform implements DynamicPlatformPlugin {
           //   - garage door.
           //   - lamp.
           break;
+
+        case (device.device_family === "camera"):
+
+          // Cameras are registered separately as external HomeKit accessories via
+          // discoverCameras() (Tend platform path). Skip them here so the legacy
+          // device-list sync doesn't treat them as unsupported and try to remove them.
+          continue;
 
         default:
 

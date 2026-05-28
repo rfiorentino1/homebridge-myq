@@ -170,7 +170,9 @@ export class myQPlatform {
                 accessory = new this.api.platformAccessory(cam.name, uuid, 17 /* this.hap.Categories.IP_CAMERA */);
                 this.log.info("%s: Adding Tend camera to HomeKit (serial=%s).", cam.name, cam.serial_number);
                 this.api.publishExternalAccessories(PLUGIN_NAME, [accessory]);
-                this.accessories.push(accessory);
+                // NOTE: external camera accessories are NOT tracked in this.accessories — that array
+                // is for the bridged garage doors. Pushing externals here causes the legacy
+                // device-list sync to "unregister" them as unknown devices on the next poll.
             }
             if (!this.configuredCameras[accessory.UUID]) {
                 this.configuredCameras[accessory.UUID] = new myQCamera(accessory, this.api, this.log, cam, jwtProvider);
@@ -193,6 +195,11 @@ export class myQPlatform {
                     //   - garage door.
                     //   - lamp.
                     break;
+                case (device.device_family === "camera"):
+                    // Cameras are registered separately as external HomeKit accessories via
+                    // discoverCameras() (Tend platform path). Skip them here so the legacy
+                    // device-list sync doesn't treat them as unsupported and try to remove them.
+                    continue;
                 default:
                     // Unless we are debugging device discovery, ignore any gateways.
                     // These are typically gateways, hubs, etc. that shouldn't be causing us to alert anyway.
