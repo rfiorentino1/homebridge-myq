@@ -7,7 +7,6 @@ import { myQLamp } from "./myq-lamp.js";
 import { myQMqtt } from "./myq-mqtt.js";
 import { TendApi } from "./tend-api.js";
 import fs from "node:fs";
-import path from "node:path";
 import util from "node:util";
 export class myQPlatform {
     accessories;
@@ -111,49 +110,44 @@ export class myQPlatform {
         // Add this to the accessory array so we can track it.
         this.accessories.push(accessory);
     }
-    get tokenStatePath() {
-        return path.join(this.api.user.storagePath(), "myq-refresh-token.json");
-    }
-    loadPersistedRefreshToken() {
-        try {
-            if (!fs.existsSync(this.tokenStatePath)) {
-                return null;
-            }
-            const data = JSON.parse(fs.readFileSync(this.tokenStatePath, "utf8"));
-            return data?.refreshToken ?? null;
-        }
-        catch (e) {
-            this.log.debug("Couldn't read persisted refresh_token: %s", String(e));
-            return null;
-        }
-    }
+    /**
+     * Write the rotated refresh_token back into config.json so it survives Homebridge
+     * restarts. This is the same field the config UI populates (and will populate when the
+     * WireGuard mitm-bootstrap UX ships), so there's one source of truth. Atomic write via
+     * temp + rename so a crash mid-write can't corrupt config.json.
+     */
     persistRefreshToken(token) {
+        const configPath = this.api.user.configPath();
         try {
-            fs.writeFileSync(this.tokenStatePath, JSON.stringify({
-                refreshToken: token,
-                updated: new Date().toISOString()
-            }, null, 2));
+            const raw = fs.readFileSync(configPath, "utf8");
+            const config = JSON.parse(raw);
+            let changed = false;
+            for (const plat of config.platforms ?? []) {
+                if (plat.platform === PLATFORM_NAME && plat.refreshToken !== token) {
+                    plat.refreshToken = token;
+                    changed = true;
+                }
+            }
+            if (!changed) {
+                return;
+            }
+            const tmp = configPath + ".myq.tmp";
+            fs.writeFileSync(tmp, JSON.stringify(config, null, 4));
+            fs.renameSync(tmp, configPath);
         }
         catch (e) {
-            this.log.warn("Couldn't persist refresh_token to %s: %s", this.tokenStatePath, String(e));
+            this.log.warn("Couldn't persist rotated refresh_token to config.json: %s", String(e));
         }
     }
     async login() {
-        // Persistence: the lib rotates refresh_token on every auth refresh, but only in memory.
-        // After a homebridge restart, the config.json token is usually stale. Prefer a sidecar
-        // we wrote on the last successful rotation.
-        const persisted = this.loadPersistedRefreshToken();
-        const initialToken = persisted ?? this.config.refreshToken;
-        if (persisted) {
-            this.log.debug("Using persisted refresh_token from %s (config token may be stale).", this.tokenStatePath);
-        }
-        // Register the rotation callback BEFORE login so the first refresh's token gets written.
+        // Register the rotation callback BEFORE login so the first refresh's token gets written
+        // back into config.json. Eliminates the "stale config.json token after restart" failure.
         this.myQApi.setTokenPersistCallback((newToken) => {
             this.persistRefreshToken(newToken);
         });
         // Whether we login successfully or not here, we're going to continue forward. The API isn't always reliable and simply stopping at this stage would leave users
         // who might have valid credentials unable to access the API.
-        await this.myQApi.login(initialToken);
+        await this.myQApi.login(this.config.refreshToken);
         // Discover Tend cameras (separate platform than the legacy myQ REST). Don't let a Tend
         // failure stop the rest of the plugin from working — garage doors keep going either way.
         await this.discoverCameras().catch(err => {

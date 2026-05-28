@@ -30,8 +30,12 @@ export declare class myQPlatform implements DynamicPlatformPlugin {
     private tendApi;
     constructor(log: Logging, config: PlatformConfig, api: API);
     configureAccessory(accessory: PlatformAccessory): void;
-    private get tokenStatePath();
-    private loadPersistedRefreshToken;
+    /**
+     * Write the rotated refresh_token back into config.json so it survives Homebridge
+     * restarts. This is the same field the config UI populates (and will populate when the
+     * WireGuard mitm-bootstrap UX ships), so there's one source of truth. Atomic write via
+     * temp + rename so a crash mid-write can't corrupt config.json.
+     */
     private persistRefreshToken;
     private login;
     /**
