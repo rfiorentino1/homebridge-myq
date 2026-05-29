@@ -8,6 +8,10 @@ export const MYQ_DEVICE_REFRESH_INTERVAL = 12;
 export const MYQ_ACTIVE_DEVICE_REFRESH_INTERVAL = 3;
 // How long, in seconds, should we continue to actively poll myQ device state changes.
 export const MYQ_ACTIVE_DEVICE_REFRESH_DURATION = 60 * 5;
+// Escalating cooldown ladder, in seconds, to apply when the myQ API is unreachable (e.g. repeated 530 throttle/server errors). On each consecutive failure we step
+// further down this ladder, capping at the final value, instead of continuing to poll on the fast active-refresh interval. This prevents us from hammering the myQ
+// service while it's throttling us — which only keeps us throttled — and stops the logs from filling with thousands of back-to-back errors. Steps: 1m, 5m, 15m, 1h.
+export const MYQ_API_BACKOFF_LADDER = [60, 300, 900, 3600];
 // How long, in seconds, should we alert a user to an obstruction.
 export const MYQ_OBSTRUCTION_ALERT_DURATION = 30;
 // Default duration, in seconds, before triggering occupancy on an opener in the open state.

@@ -1,4 +1,4 @@
-import { MYQ_ACTIVE_DEVICE_REFRESH_DURATION, MYQ_ACTIVE_DEVICE_REFRESH_INTERVAL, MYQ_DEVICE_REFRESH_INTERVAL, MYQ_MQTT_TOPIC, PLATFORM_NAME, PLUGIN_NAME } from "./settings.js";
+import { MYQ_ACTIVE_DEVICE_REFRESH_DURATION, MYQ_ACTIVE_DEVICE_REFRESH_INTERVAL, MYQ_API_BACKOFF_LADDER, MYQ_DEVICE_REFRESH_INTERVAL, MYQ_MQTT_TOPIC, PLATFORM_NAME, PLUGIN_NAME } from "./settings.js";
 import { featureOptionCategories, featureOptions, isOptionEnabled } from "./myq-options.js";
 import { myQApi } from "@hjdhjd/myq";
 import { myQCamera } from "./myq-camera.js";
@@ -21,6 +21,7 @@ export class myQPlatform {
     mqtt;
     myQApi;
     pollingTimer;
+    pollFailures = 0;
     pollOptions;
     unsupportedDevices;
     tendApi = null;
@@ -345,7 +346,20 @@ export class myQPlatform {
             void (async () => {
                 // Refresh our myQ information and gracefully handle myQ errors.
                 if (!(await this.updateAccessories())) {
-                    this.pollOptions.count = this.pollOptions.maxCount - 1;
+                    // The myQ API is unreachable — most commonly a 530 throttle/server error. The original behavior here forced us back into the fast active-refresh interval on
+                    // every failure, which meant we hammered the myQ service every few seconds while it was already throttling us. That keeps us throttled and floods the logs.
+                    // Instead, back off on an escalating cooldown ladder until connectivity returns.
+                    this.pollFailures++;
+                    const backoff = MYQ_API_BACKOFF_LADDER[Math.min(this.pollFailures - 1, MYQ_API_BACKOFF_LADDER.length - 1)];
+                    this.log.warn("myQ API unreachable (%s consecutive failure%s). Backing off — next attempt in %s seconds — to avoid hammering the myQ service.", this.pollFailures, this.pollFailures === 1 ? "" : "s", backoff);
+                    // Schedule the next attempt after the cooldown and stop here, so we don't fall through to the normal (fast) poll scheduling below.
+                    this.pollingTimer = setTimeout(() => this.poll(), backoff * 1000);
+                    return;
+                }
+                // We're connected. If we were previously backing off, announce the recovery and reset the failure counter.
+                if (this.pollFailures) {
+                    this.log.info("myQ API connectivity restored after %s consecutive failure%s.", this.pollFailures, this.pollFailures === 1 ? "" : "s");
+                    this.pollFailures = 0;
                 }
                 // Fire off the next polling interval.
                 this.poll();

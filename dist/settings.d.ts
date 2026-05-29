@@ -1,6 +1,7 @@
 export declare const MYQ_DEVICE_REFRESH_INTERVAL = 12;
 export declare const MYQ_ACTIVE_DEVICE_REFRESH_INTERVAL = 3;
 export declare const MYQ_ACTIVE_DEVICE_REFRESH_DURATION: number;
+export declare const MYQ_API_BACKOFF_LADDER: number[];
 export declare const MYQ_OBSTRUCTION_ALERT_DURATION = 30;
 export declare const MYQ_OCCUPANCY_DURATION = 300;
 export declare const MYQ_MQTT_RECONNECT_INTERVAL = 60;
