@@ -33,6 +33,12 @@ export class myQAccessory {
         this.hints.syncNames = this.hasFeature("Device.SyncNames");
         return true;
     }
+    // Called when the myQ API becomes unreachable, so the accessory can flip itself to "No Response" in HomeKit
+    // instead of leaving a stale value on display. Default is a no-op; device types that have a meaningful live
+    // state to misrepresent (e.g. the garage door) override this.
+    markUnreachable() {
+        return;
+    }
     // Execute myQ commands.
     async command(myQCommand) {
         if (!this.myQ) {

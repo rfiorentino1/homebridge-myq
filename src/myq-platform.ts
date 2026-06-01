@@ -38,6 +38,11 @@ export class myQPlatform implements DynamicPlatformPlugin {
   public readonly myQApi!: myQApi;
   private pollingTimer!: NodeJS.Timeout;
   private pollFailures = 0;
+
+  // Whether we currently have a working connection to the myQ API. When this is false, accessories report
+  // "No Response" in HomeKit rather than serving a stale cached state — we'd rather tell the truth ("I can't
+  // reach this right now") than confidently show a door as closed when we actually have no idea.
+  public apiOnline = true;
   public readonly pollOptions!: myQPollInterface;
   private unsupportedDevices: { [index: string]: boolean };
   private tendApi: TendApi | null = null;
@@ -508,6 +513,20 @@ export class myQPlatform implements DynamicPlatformPlugin {
           // Instead, back off on an escalating cooldown ladder until connectivity returns.
           this.pollFailures++;
 
+          // The moment we can't reach myQ, tell HomeKit the accessories are unresponsive rather than continuing
+          // to serve their last-known (now possibly wrong) state. This flips them to "No Response" immediately —
+          // we don't wait for repeated failures, because a door whose true state we can't see should never read
+          // as a confident "closed." It's cleared the instant a poll succeeds again (below).
+          if(this.apiOnline) {
+
+            this.apiOnline = false;
+
+            for(const key in this.configuredDevices) {
+
+              this.configuredDevices[key].markUnreachable();
+            }
+          }
+
           const backoff = MYQ_API_BACKOFF_LADDER[Math.min(this.pollFailures - 1, MYQ_API_BACKOFF_LADDER.length - 1)];
 
           this.log.warn("myQ API unreachable (%s consecutive failure%s). Backing off — next attempt in %s seconds — to avoid hammering the myQ service.",
@@ -519,7 +538,12 @@ export class myQPlatform implements DynamicPlatformPlugin {
           return;
         }
 
-        // We're connected. If we were previously backing off, announce the recovery and reset the failure counter.
+        // We're connected. updateAccessories() above has already pushed fresh, real state to every accessory,
+        // which clears any "No Response" we set while we were offline — so just flip the flag back so on-demand
+        // reads return live values again.
+        this.apiOnline = true;
+
+        // If we were previously backing off, announce the recovery and reset the failure counter.
         if(this.pollFailures) {
 
           this.log.info("myQ API connectivity restored after %s consecutive failure%s.", this.pollFailures, this.pollFailures === 1 ? "" : "s");

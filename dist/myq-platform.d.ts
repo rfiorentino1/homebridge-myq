@@ -26,6 +26,7 @@ export declare class myQPlatform implements DynamicPlatformPlugin {
     readonly myQApi: myQApi;
     private pollingTimer;
     private pollFailures;
+    apiOnline: boolean;
     readonly pollOptions: myQPollInterface;
     private unsupportedDevices;
     private tendApi;

@@ -84,9 +84,12 @@ export class myQGarageDoor extends myQAccessory {
     // Inform HomeKit of our current state.
     garageDoorService.getCharacteristic(this.hap.Characteristic.CurrentDoorState).onGet(() => {
 
-      if(this.status === -1) {
+      // If we can't reach the myQ API, or we genuinely can't determine the door's state, report the door as
+      // not responding ("No Response") instead of returning a value we can't stand behind. (The previous code
+      // constructed an Error here but never threw it, so HomeKit was silently handed a stale/garbage state.)
+      if(!this.platform.apiOnline || (this.status === -1)) {
 
-        new Error("Unable to determine the current door state.");
+        throw new this.hap.HapStatusError(this.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
       }
 
       // Return garage door status.
@@ -442,6 +445,20 @@ export class myQGarageDoor extends myQAccessory {
   }
 
   // Update our HomeKit status.
+  // Flip the door to "No Response" in HomeKit when the myQ API is unreachable. Pushing an Error into the
+  // primary service's CurrentDoorState marks the whole accessory as not responding, which is the honest thing
+  // to show when we have no idea whether the door is actually open or closed. The next successful poll calls
+  // updateState() and pushes a real value, which clears this automatically.
+  public markUnreachable(): void {
+
+    const garageDoorService = this.accessory.getService(this.hap.Service.GarageDoorOpener);
+
+    garageDoorService?.updateCharacteristic(this.hap.Characteristic.CurrentDoorState, new Error("myQ API unreachable."));
+    garageDoorService?.updateCharacteristic(this.hap.Characteristic.StatusActive, false);
+
+    this.log.debug("myQ API unreachable: reporting the door as not responding in HomeKit.");
+  }
+
   public updateState(): boolean {
 
     // Update our active status.

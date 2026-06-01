@@ -30,6 +30,7 @@ export declare abstract class myQAccessory {
     protected configureHints(): boolean;
     protected abstract configureDevice(): void;
     abstract updateState(): boolean;
+    markUnreachable(): void;
     protected command(myQCommand: string): Promise<boolean>;
     protected configureInfo(): boolean;
     getFeatureFloat(option: string): number | undefined;

@@ -12,6 +12,7 @@ export declare class myQGarageDoor extends myQAccessory {
     protected configureOccupancySensor(): boolean;
     private configureMqtt;
     private setDoorState;
+    markUnreachable(): void;
     updateState(): boolean;
     private doorCommand;
     private translateDoorState;

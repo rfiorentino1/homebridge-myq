@@ -78,6 +78,14 @@ export abstract class myQAccessory {
   // from the myQ API.
   abstract updateState(): boolean;
 
+  // Called when the myQ API becomes unreachable, so the accessory can flip itself to "No Response" in HomeKit
+  // instead of leaving a stale value on display. Default is a no-op; device types that have a meaningful live
+  // state to misrepresent (e.g. the garage door) override this.
+  public markUnreachable(): void {
+
+    return;
+  }
+
   // Execute myQ commands.
   protected async command(myQCommand: string): Promise<boolean> {
 
